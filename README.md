@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 # justprep
 =======
 # AI-Powered Interview System
@@ -205,14 +204,4 @@ INFO - VAD event received for session test-session-123: speech_end
 INFO - User finished speaking. Transitioning user -> idle
 ```
 
-## Next Steps
 
-After setup, proceed to:
-- Task 1.2: Data Models & Type Definitions
-- Task 2.1: FastAPI WebSocket Server Setup
-
-## License
-
-[Add license information here]
-
->>>>>>> 23577ba (Initial commit)
