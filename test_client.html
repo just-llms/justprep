@@ -1,0 +1,1302 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Interview System - E2E Test Client</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 1200px;
+            margin: 20px auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            border: 1px solid #ddd;
+            padding: 20px;
+            border-radius: 8px;
+            background-color: white;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+        h1 {
+            color: #333;
+            margin-top: 0;
+        }
+        h2 {
+            color: #555;
+            border-bottom: 2px solid #007bff;
+            padding-bottom: 5px;
+        }
+        button {
+            padding: 10px 20px;
+            margin: 5px;
+            font-size: 16px;
+            cursor: pointer;
+            border: none;
+            border-radius: 4px;
+            background-color: #007bff;
+            color: white;
+        }
+        button:hover:not(:disabled) {
+            background-color: #0056b3;
+        }
+        button:disabled {
+            background-color: #ccc;
+            cursor: not-allowed;
+        }
+        button.danger {
+            background-color: #dc3545;
+        }
+        button.danger:hover:not(:disabled) {
+            background-color: #c82333;
+        }
+        button.success {
+            background-color: #28a745;
+        }
+        button.success:hover:not(:disabled) {
+            background-color: #218838;
+        }
+        .status {
+            margin: 10px 0;
+            padding: 10px;
+            background: #f0f0f0;
+            border-radius: 4px;
+            font-weight: bold;
+        }
+        .status.connected {
+            background: #d4edda;
+            color: #155724;
+        }
+        .status.recording {
+            background: #fff3cd;
+            color: #856404;
+        }
+        .status.error {
+            background: #f8d7da;
+            color: #721c24;
+        }
+        .status.limit-exceeded {
+            background: #f8d7da;
+            color: #721c24;
+        }
+        .log {
+            margin-top: 20px;
+            max-height: 400px;
+            overflow-y: auto;
+            background: #f9f9f9;
+            padding: 10px;
+            border-radius: 4px;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            border: 1px solid #ddd;
+        }
+        .log-entry {
+            margin: 2px 0;
+            padding: 2px;
+        }
+        .log-info { color: #0066cc; }
+        .log-success { color: #009900; }
+        .log-error { color: #cc0000; }
+        .log-warning { color: #ff9900; }
+        .log-limit { color: #dc3545; font-weight: bold; }
+        input[type="text"], input[type="number"] {
+            padding: 5px;
+            font-size: 14px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            margin: 5px;
+        }
+        .stats {
+            margin: 10px 0;
+            padding: 10px;
+            background: #e9ecef;
+            border-radius: 4px;
+        }
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 10px;
+            margin: 10px 0;
+        }
+        .stat-item {
+            padding: 8px;
+            background: white;
+            border-radius: 4px;
+            border: 1px solid #ddd;
+        }
+        .test-section {
+            margin: 20px 0;
+            padding: 15px;
+            background: #f8f9fa;
+            border-radius: 4px;
+            border-left: 4px solid #007bff;
+        }
+        .test-section h3 {
+            margin-top: 0;
+            color: #007bff;
+        }
+        .limit-indicator {
+            display: inline-block;
+            padding: 2px 8px;
+            border-radius: 3px;
+            font-size: 11px;
+            font-weight: bold;
+            margin-left: 5px;
+        }
+        .limit-ok { background: #d4edda; color: #155724; }
+        .limit-warning { background: #fff3cd; color: #856404; }
+        .limit-exceeded { background: #f8d7da; color: #721c24; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>AI Interview System - E2E Test Client</h1>
+        
+        <div class="status" id="status">Step 1: Upload Resume</div>
+        
+        <!-- Step 1: Resume Upload -->
+        <div class="test-section" id="resumeSection">
+            <h3>Step 1: Upload Resume (PDF)</h3>
+            <div style="margin-bottom: 10px;">
+                <input type="file" id="resumeFile" accept=".pdf" style="margin-right: 10px;">
+                <button id="uploadBtn" onclick="uploadResume()" class="success">Upload & Parse Resume</button>
+            </div>
+            <div id="uploadStatus" style="display: none; margin-top: 10px; padding: 10px; border-radius: 4px;"></div>
+            
+            <!-- Candidate Info Display -->
+            <div id="candidateInfo" style="display: none; margin-top: 15px; padding: 15px; background: #e8f5e9; border-radius: 4px; border-left: 4px solid #4caf50;">
+                <h4 style="margin-top: 0; color: #2e7d32;">Extracted Candidate Information</h4>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+                    <div><strong>Name:</strong> <span id="candidateName">-</span></div>
+                    <div><strong>Current Role:</strong> <span id="candidateRole">-</span></div>
+                    <div><strong>Company:</strong> <span id="candidateCompany">-</span></div>
+                    <div><strong>Experience:</strong> <span id="candidateExperience">-</span> years</div>
+                </div>
+                <div style="margin-top: 10px;">
+                    <strong>Key Interview Points:</strong>
+                    <ul id="interviewPoints" style="margin: 5px 0; padding-left: 20px;"></ul>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Step 2: Connect & Interview -->
+        <div class="test-section" id="interviewSection" style="opacity: 0.5;">
+            <h3>Step 2: Start Interview</h3>
+            <div>
+                <button id="connectBtn" onclick="connect()" disabled>Connect & Start Interview</button>
+                <button id="startBtn" onclick="startAudio()" disabled>Start Audio</button>
+                <button id="stopBtn" onclick="stopAudio()" disabled>Stop Audio</button>
+                <button id="disconnectBtn" onclick="disconnect()" disabled>Disconnect</button>
+                <button class="danger" onclick="testRateLimit()" disabled id="testRateLimitBtn">Test Rate Limit</button>
+            </div>
+            
+            <div style="margin-top: 10px;">
+                <label>Session ID: <input type="text" id="sessionId" value="" style="width: 300px;" readonly></label>
+            </div>
+        </div>
+        
+        <div class="stats-grid">
+            <div class="stat-item">
+                <h4>Audio Stats</h4>
+                <div>Chunks sent: <span id="chunkCount">0</span></div>
+                <div>Bytes sent: <span id="bytesCount">0</span></div>
+                <div>Duration: <span id="audioDuration">0</span>s</div>
+            </div>
+            <div class="stat-item">
+                <h4>STT Status</h4>
+                <div>Status: <span id="sttStatusText">Idle</span></div>
+                <div>Final transcripts: <span id="finalTranscriptCount">0</span></div>
+                <div>Partial transcripts: <span id="partialTranscriptCount">0</span></div>
+            </div>
+            <div class="stat-item">
+                <h4>AI Engine</h4>
+                <div>Status: <span id="aiEngineStatusText">Idle</span></div>
+                <div>Responses: <span id="aiResponseCount">0</span></div>
+                <div>Phase: <span id="currentPhase">-</span></div>
+                <div>Turns: <span id="totalTurns">0</span></div>
+            </div>
+            <div class="stat-item">
+                <h4>Safety Limits</h4>
+                <div>Session Duration: <span id="sessionDuration">0</span>m <span class="limit-indicator limit-ok" id="durationIndicator">OK</span></div>
+                <div>Total Turns: <span id="sessionTurns">0</span>/100 <span class="limit-indicator limit-ok" id="turnsIndicator">OK</span></div>
+                <div>LLM Tokens: <span id="llmTokens">0</span>/100k <span class="limit-indicator limit-ok" id="tokensIndicator">OK</span></div>
+                <div>STT Minutes: <span id="sttMinutes">0.00</span>/60 <span class="limit-indicator limit-ok" id="sttIndicator">OK</span></div>
+                <div>Rate Limit: <span id="rateLimitStatus">OK</span> <span class="limit-indicator limit-ok" id="rateLimitIndicator">OK</span></div>
+            </div>
+        </div>
+        
+        <div class="test-section">
+            <h3>Safety Limits Testing</h3>
+            <button onclick="testSessionDurationLimit()" disabled id="testDurationBtn">Test Duration Limit (Fast)</button>
+            <button onclick="testTurnLimit()" disabled id="testTurnBtn">Test Turn Limit</button>
+            <button onclick="testCostLimits()" disabled id="testCostBtn">Test Cost Limits</button>
+            <button onclick="simulateStuckSession()" disabled id="testStuckBtn">Simulate Stuck Session</button>
+            <div style="margin-top: 10px;">
+                <label>Simulate Duration (minutes): <input type="number" id="simDuration" value="61" min="1" max="120" style="width: 80px;"></label>
+                <label>Simulate Turns: <input type="number" id="simTurns" value="101" min="1" max="200" style="width: 80px;"></label>
+            </div>
+        </div>
+        
+        <div class="test-section">
+            <h3>Error Handling Testing</h3>
+            <button onclick="testErrorNotifications()" disabled id="testErrorBtn">Test Error Notifications</button>
+            <button onclick="testGracefulDegradation()" disabled id="testGracefulBtn">Test Graceful Degradation</button>
+        </div>
+        
+        <div>
+            <h3>Conversation (User Transcripts):</h3>
+            <div style="margin-bottom: 10px;">
+                <button onclick="clearTranscripts()">Clear Transcripts</button>
+                <label style="margin-left: 10px;">
+                    <input type="checkbox" id="showPartial"> Show Partial Transcripts
+                </label>
+            </div>
+            <div class="log" id="transcriptLog" style="min-height: 200px; max-height: 400px; background: #f0f8ff;">
+                <div style="color: #666; font-style: italic;">User transcripts will appear here...</div>
+            </div>
+        </div>
+        
+        <div>
+            <h3>Live Conversation View:</h3>
+            <div style="margin-bottom: 10px;">
+                <button onclick="clearConversation()">Clear Conversation</button>
+            </div>
+            <div class="log" id="conversationLog" style="min-height: 250px; max-height: 500px; background: #fafafa; border: 2px solid #007bff;">
+                <div style="color: #666; font-style: italic;">Conversation will appear here as it happens...</div>
+            </div>
+        </div>
+        
+        <div>
+            <h3>AI Engine Responses:</h3>
+            <div style="margin-bottom: 10px;">
+                <button onclick="clearAIResponses()">Clear AI Responses</button>
+            </div>
+            <div class="log" id="aiResponseLog" style="min-height: 150px; max-height: 300px;">
+                <div style="color: #666; font-style: italic;">No AI responses yet...</div>
+            </div>
+        </div>
+        
+        <div>
+            <h3>System Messages & Notifications:</h3>
+            <div style="margin-bottom: 10px;">
+                <button onclick="clearSystemMessages()">Clear Messages</button>
+            </div>
+            <div class="log" id="systemMessageLog" style="min-height: 150px; max-height: 300px;">
+                <div style="color: #666; font-style: italic;">No system messages yet...</div>
+            </div>
+        </div>
+        
+        <div>
+            <h3>Event Log:</h3>
+            <button onclick="clearLog()">Clear Log</button>
+            <div class="log" id="log"></div>
+        </div>
+    </div>
+
+    <script>
+        let ws = null;
+        let mediaStream = null;
+        let audioContext = null;
+        let processor = null;
+        let isRecording = false;
+        let chunkCount = 0;
+        let bytesCount = 0;
+        let heartbeatInterval = null;
+        let finalTranscriptCount = 0;
+        let partialTranscriptCount = 0;
+        let sttStatus = 'Idle';
+        let aiResponseCount = 0;
+        let aiEngineStatus = 'Idle';
+        let sessionStartTime = null;
+        let totalTurns = 0;
+        let llmTokens = 0;
+        let sttMinutes = 0.0;
+        let rateLimitRequests = 0;
+        const SAMPLE_RATE = 16000;
+        const CHUNK_SIZE_MS = 20;
+        const CHUNK_SIZE_SAMPLES = (SAMPLE_RATE * CHUNK_SIZE_MS) / 1000;
+        
+        // Candidate data from resume parsing
+        let candidateData = null;
+        
+        async function uploadResume() {
+            const fileInput = document.getElementById('resumeFile');
+            const uploadStatus = document.getElementById('uploadStatus');
+            const uploadBtn = document.getElementById('uploadBtn');
+            
+            if (!fileInput.files || fileInput.files.length === 0) {
+                showUploadStatus('Please select a PDF file first.', 'error');
+                return;
+            }
+            
+            const file = fileInput.files[0];
+            if (!file.name.toLowerCase().endsWith('.pdf')) {
+                showUploadStatus('Please select a PDF file.', 'error');
+                return;
+            }
+            
+            uploadBtn.disabled = true;
+            uploadBtn.textContent = 'Uploading...';
+            showUploadStatus('Uploading and parsing resume...', 'info');
+            
+            try {
+                const formData = new FormData();
+                formData.append('file', file);
+                
+                const response = await fetch('http://localhost:8000/api/parse-resume', {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    throw new Error(errorData.detail || 'Failed to parse resume');
+                }
+                
+                const data = await response.json();
+                log(`Resume parsed successfully: ${data.name}`, 'success');
+                
+                // Store candidate data
+                candidateData = data;
+                
+                // Update UI with candidate info
+                document.getElementById('candidateName').textContent = data.name || 'N/A';
+                document.getElementById('candidateRole').textContent = data.current_role || 'N/A';
+                document.getElementById('candidateCompany').textContent = data.current_company || 'N/A';
+                document.getElementById('candidateExperience').textContent = data.years_of_experience || 'N/A';
+                
+                // Update interview points
+                const pointsList = document.getElementById('interviewPoints');
+                pointsList.innerHTML = '';
+                if (data.interview_points && data.interview_points.length > 0) {
+                    data.interview_points.forEach(point => {
+                        const li = document.createElement('li');
+                        li.textContent = point;
+                        li.style.marginBottom = '5px';
+                        pointsList.appendChild(li);
+                    });
+                } else {
+                    pointsList.innerHTML = '<li>No interview points extracted</li>';
+                }
+                
+                // Show candidate info section
+                document.getElementById('candidateInfo').style.display = 'block';
+                
+                // Set session ID
+                document.getElementById('sessionId').value = data.session_id;
+                
+                // Enable interview section
+                document.getElementById('interviewSection').style.opacity = '1';
+                document.getElementById('connectBtn').disabled = false;
+                
+                showUploadStatus('Resume parsed successfully! Click "Connect & Start Interview" to begin.', 'success');
+                updateStatus('Step 2: Connect to start interview', '');
+                
+            } catch (error) {
+                log(`Error uploading resume: ${error.message}`, 'error');
+                showUploadStatus(`Error: ${error.message}`, 'error');
+            } finally {
+                uploadBtn.disabled = false;
+                uploadBtn.textContent = 'Upload & Parse Resume';
+            }
+        }
+        
+        function showUploadStatus(message, type) {
+            const uploadStatus = document.getElementById('uploadStatus');
+            uploadStatus.style.display = 'block';
+            uploadStatus.textContent = message;
+            
+            const colors = {
+                'info': { bg: '#e3f2fd', border: '#2196f3', text: '#1565c0' },
+                'success': { bg: '#e8f5e9', border: '#4caf50', text: '#2e7d32' },
+                'error': { bg: '#ffebee', border: '#f44336', text: '#c62828' }
+            };
+            
+            const style = colors[type] || colors.info;
+            uploadStatus.style.backgroundColor = style.bg;
+            uploadStatus.style.borderLeft = `4px solid ${style.border}`;
+            uploadStatus.style.color = style.text;
+        }
+        
+        // TTS Audio playback
+        let playbackAudioContext = null;
+        let audioQueue = [];
+        let isPlayingAudio = false;
+        let audioStartTime = 0;
+
+        function log(message, type = 'info') {
+            const logDiv = document.getElementById('log');
+            const entry = document.createElement('div');
+            entry.className = `log-entry log-${type}`;
+            entry.textContent = `[${new Date().toLocaleTimeString()}] ${message}`;
+            logDiv.appendChild(entry);
+            logDiv.scrollTop = logDiv.scrollHeight;
+            console.log(message);
+        }
+
+        function clearLog() {
+            document.getElementById('log').innerHTML = '';
+        }
+
+        function updateStatus(status, className = '') {
+            const statusDiv = document.getElementById('status');
+            statusDiv.textContent = status;
+            statusDiv.className = `status ${className}`;
+        }
+
+        function connect() {
+            try {
+                const sessionId = document.getElementById('sessionId').value;
+                if (!sessionId) {
+                    log('Please upload a resume first to get a session ID', 'error');
+                    return;
+                }
+                const wsUrl = `ws://localhost:8000/ws/${sessionId}`;
+                
+                log(`Connecting to ${wsUrl}...`, 'info');
+                console.log('Connecting to WebSocket:', wsUrl);
+                
+                ws = new WebSocket(wsUrl);
+            
+            ws.onopen = () => {
+                log('WebSocket connected! Interview starting...', 'success');
+                updateStatus(`Connected - Interview with ${candidateData?.name || 'Candidate'}`, 'connected');
+                document.getElementById('connectBtn').disabled = true;
+                document.getElementById('disconnectBtn').disabled = false;
+                document.getElementById('startBtn').disabled = false;
+                document.getElementById('testRateLimitBtn').disabled = false;
+                document.getElementById('testDurationBtn').disabled = false;
+                document.getElementById('testTurnBtn').disabled = false;
+                document.getElementById('testCostBtn').disabled = false;
+                document.getElementById('testStuckBtn').disabled = false;
+                document.getElementById('testErrorBtn').disabled = false;
+                document.getElementById('testGracefulBtn').disabled = false;
+                
+                // Initialize playback audio context
+                initPlaybackAudioContext();
+                
+                // Reset audio queue for new session
+                audioQueue = [];
+                isPlayingAudio = false;
+                audioStartTime = 0;
+                
+                sessionStartTime = Date.now();
+                
+                // Send heartbeat every 30 seconds
+                heartbeatInterval = setInterval(() => {
+                    if (ws && ws.readyState === WebSocket.OPEN) {
+                        ws.send(JSON.stringify({
+                            type: 'HEARTBEAT',
+                            timestamp: new Date().toISOString()
+                        }));
+                        log('Sent heartbeat', 'info');
+                    }
+                }, 30000);
+                
+                // Update session duration periodically
+                setInterval(updateSessionStats, 1000);
+            };
+            
+            ws.onmessage = (event) => {
+                if (typeof event.data === 'string') {
+                    try {
+                        const message = JSON.parse(event.data);
+                        handleMessage(message);
+                    } catch (e) {
+                        log(`Received text: ${event.data}`, 'info');
+                    }
+                } else {
+                    // This is TTS audio - play it
+                    handleTTSAudio(event.data);
+                }
+            };
+            
+            ws.onerror = (error) => {
+                log(`WebSocket error: ${error}`, 'error');
+                updateStatus('Error', 'error');
+            };
+            
+            ws.onclose = () => {
+                log('WebSocket disconnected', 'warning');
+                updateStatus('Disconnected', '');
+                document.getElementById('connectBtn').disabled = false;
+                document.getElementById('disconnectBtn').disabled = true;
+                document.getElementById('startBtn').disabled = true;
+                document.getElementById('stopBtn').disabled = true;
+                document.getElementById('testRateLimitBtn').disabled = true;
+                document.getElementById('testDurationBtn').disabled = true;
+                document.getElementById('testTurnBtn').disabled = true;
+                document.getElementById('testCostBtn').disabled = true;
+                document.getElementById('testStuckBtn').disabled = true;
+                document.getElementById('testErrorBtn').disabled = true;
+                document.getElementById('testGracefulBtn').disabled = true;
+                stopAudio();
+                if (heartbeatInterval) {
+                    clearInterval(heartbeatInterval);
+                    heartbeatInterval = null;
+                }
+            };
+            } catch (error) {
+                log(`Error in connect function: ${error.message}`, 'error');
+                console.error('Connect error:', error);
+                updateStatus('Error', 'error');
+            }
+        }
+
+        function handleMessage(message) {
+            log(`Received: ${message.type}`, 'info');
+            
+            switch(message.type) {
+                case 'HEARTBEAT_ACK':
+                    log('Heartbeat acknowledged', 'success');
+                    break;
+                case 'ERROR':
+                    handleError(message);
+                    break;
+                case 'TRANSCRIPT':
+                case 'TRANSCRIPT_PARTIAL':
+                case 'TRANSCRIPT_FINAL':
+                    handleTranscript(message);
+                    break;
+                case 'STT_STATUS':
+                    handleSTTStatus(message);
+                    break;
+                case 'USER_RESPONSE_COMPLETE':
+                    handleUserResponseComplete(message);
+                    break;
+                case 'AI_RESPONSE':
+                    handleAIResponse(message);
+                    break;
+                case 'LIMIT_EXCEEDED':
+                    handleLimitExceeded(message);
+                    break;
+                case 'SESSION_TIMEOUT':
+                    handleSessionTimeout(message);
+                    break;
+                case 'INTERVIEW_COMPLETE':
+                    handleInterviewComplete(message);
+                    break;
+                default:
+                    log(`Unknown message type: ${message.type}`, 'warning');
+            }
+        }
+
+        function handleError(message) {
+            const errorCode = message.error_code || message.error_type || 'UNKNOWN';
+            const errorMsg = message.message || 'Unknown error';
+            log(`Error: ${errorMsg} (${errorCode})`, 'error');
+            addSystemMessage({
+                type: 'ERROR',
+                code: errorCode,
+                message: errorMsg,
+                timestamp: message.timestamp || new Date().toISOString()
+            });
+        }
+
+        function handleLimitExceeded(message) {
+            const reason = message.reason || 'unknown';
+            const limitMsg = message.message || 'Limit exceeded';
+            log(`Limit Exceeded: ${limitMsg} (${reason})`, 'limit');
+            updateStatus('Limit Exceeded', 'limit-exceeded');
+            
+            // Update limit indicators
+            if (reason === 'max_duration_exceeded') {
+                document.getElementById('durationIndicator').textContent = 'EXCEEDED';
+                document.getElementById('durationIndicator').className = 'limit-indicator limit-exceeded';
+            } else if (reason === 'max_turns_exceeded') {
+                document.getElementById('turnsIndicator').textContent = 'EXCEEDED';
+                document.getElementById('turnsIndicator').className = 'limit-indicator limit-exceeded';
+            } else if (reason === 'max_tokens_exceeded' || reason === 'max_stt_minutes_exceeded') {
+                document.getElementById('tokensIndicator').textContent = 'EXCEEDED';
+                document.getElementById('tokensIndicator').className = 'limit-indicator limit-exceeded';
+            } else if (reason === 'rate_limit_exceeded') {
+                document.getElementById('rateLimitIndicator').textContent = 'EXCEEDED';
+                document.getElementById('rateLimitIndicator').className = 'limit-indicator limit-exceeded';
+                document.getElementById('rateLimitStatus').textContent = `Rate limit exceeded. Retry after ${message.retry_after || 0}s`;
+            }
+            
+            addSystemMessage({
+                type: 'LIMIT_EXCEEDED',
+                reason: reason,
+                message: limitMsg,
+                retry_after: message.retry_after,
+                timestamp: message.timestamp || new Date().toISOString()
+            });
+        }
+
+        function handleSessionTimeout(message) {
+            log(`Session Timeout: ${message.message}`, 'warning');
+            addSystemMessage({
+                type: 'SESSION_TIMEOUT',
+                message: message.message,
+                timestamp: message.timestamp || new Date().toISOString()
+            });
+        }
+
+        function handleInterviewComplete(message) {
+            log(`Interview Complete: ${message.message}`, 'success');
+            addSystemMessage({
+                type: 'INTERVIEW_COMPLETE',
+                message: message.message,
+                timestamp: message.timestamp || new Date().toISOString()
+            });
+        }
+
+        function addSystemMessage(msg) {
+            const logDiv = document.getElementById('systemMessageLog');
+            const noMessagesMsg = logDiv.querySelector('div[style*="color: #666"]');
+            if (noMessagesMsg) {
+                noMessagesMsg.remove();
+            }
+            
+            const entry = document.createElement('div');
+            entry.className = 'log-entry';
+            entry.style.marginBottom = '5px';
+            entry.style.padding = '5px';
+            entry.style.borderLeft = '3px solid ' + (msg.type === 'ERROR' ? '#dc3545' : msg.type === 'LIMIT_EXCEEDED' ? '#ff9900' : '#0066cc');
+            entry.style.backgroundColor = '#f9f9f9';
+            
+            const timestamp = new Date(msg.timestamp).toLocaleTimeString();
+            entry.innerHTML = `
+                <div style="color: #666; font-size: 11px;">[${timestamp}] <strong>${msg.type}</strong></div>
+                <div style="margin-top: 3px;">${escapeHtml(msg.message || msg.code || '')}</div>
+                ${msg.reason ? `<div style="font-size: 11px; color: #666;">Reason: ${escapeHtml(msg.reason)}</div>` : ''}
+                ${msg.retry_after ? `<div style="font-size: 11px; color: #666;">Retry after: ${msg.retry_after}s</div>` : ''}
+            `;
+            
+            logDiv.appendChild(entry);
+            logDiv.scrollTop = logDiv.scrollHeight;
+        }
+
+        function clearSystemMessages() {
+            document.getElementById('systemMessageLog').innerHTML = 
+                '<div style="color: #666; font-style: italic;">No system messages yet...</div>';
+        }
+
+        function updateSessionStats() {
+            if (sessionStartTime) {
+                const durationMs = Date.now() - sessionStartTime;
+                const durationMinutes = durationMs / 60000;
+                document.getElementById('sessionDuration').textContent = durationMinutes.toFixed(1);
+                
+                // Update duration indicator
+                const durationIndicator = document.getElementById('durationIndicator');
+                if (durationMinutes >= 60) {
+                    durationIndicator.textContent = 'EXCEEDED';
+                    durationIndicator.className = 'limit-indicator limit-exceeded';
+                } else if (durationMinutes >= 50) {
+                    durationIndicator.textContent = 'WARNING';
+                    durationIndicator.className = 'limit-indicator limit-warning';
+                }
+            }
+        }
+
+        async function startAudio() {
+            try {
+                log('Requesting microphone access...', 'info');
+                mediaStream = await navigator.mediaDevices.getUserMedia({
+                    audio: {
+                        sampleRate: SAMPLE_RATE,
+                        channelCount: 1,
+                        echoCancellation: true,
+                        noiseSuppression: true,
+                        autoGainControl: true
+                    }
+                });
+                
+                log('Microphone access granted', 'success');
+                
+                audioContext = new (window.AudioContext || window.webkitAudioContext)({
+                    sampleRate: SAMPLE_RATE
+                });
+                
+                const source = audioContext.createMediaStreamSource(mediaStream);
+                processor = audioContext.createScriptProcessor(4096, 1, 1);
+                
+                let audioStartTime = Date.now();
+                
+                processor.onaudioprocess = (e) => {
+                    if (!isRecording || !ws || ws.readyState !== WebSocket.OPEN) {
+                        return;
+                    }
+                    
+                    const inputData = e.inputBuffer.getChannelData(0);
+                    const samples = inputData.length;
+                    
+                    // Convert float32 to int16 PCM
+                    const pcmData = new Int16Array(samples);
+                    for (let i = 0; i < samples; i++) {
+                        const s = Math.max(-1, Math.min(1, inputData[i]));
+                        pcmData[i] = s < 0 ? s * 0x8000 : s * 0x7FFF;
+                    }
+                    
+                    // Send in 20ms chunks
+                    const chunkSamples = CHUNK_SIZE_SAMPLES;
+                    for (let i = 0; i < samples; i += chunkSamples) {
+                        const chunk = pcmData.slice(i, i + chunkSamples);
+                        if (chunk.length === chunkSamples) {
+                            const buffer = chunk.buffer;
+                            ws.send(buffer);
+                            chunkCount++;
+                            bytesCount += buffer.byteLength;
+                            document.getElementById('chunkCount').textContent = chunkCount;
+                            document.getElementById('bytesCount').textContent = bytesCount;
+                            
+                            // Update audio duration
+                            const duration = (bytesCount / 2) / SAMPLE_RATE;
+                            document.getElementById('audioDuration').textContent = duration.toFixed(2);
+                            sttMinutes = duration / 60;
+                            document.getElementById('sttMinutes').textContent = sttMinutes.toFixed(3);
+                        }
+                    }
+                };
+                
+                source.connect(processor);
+                processor.connect(audioContext.destination);
+                
+                isRecording = true;
+                log('Audio recording started', 'success');
+                updateStatus('Recording', 'recording');
+                document.getElementById('startBtn').disabled = true;
+                document.getElementById('stopBtn').disabled = false;
+                
+                // Send CONTROL_START message
+                if (ws && ws.readyState === WebSocket.OPEN) {
+                    ws.send(JSON.stringify({
+                        type: 'CONTROL_START',
+                        timestamp: new Date().toISOString()
+                    }));
+                    log('Sent CONTROL_START', 'info');
+                    updateSTTStatus('Idle');
+                }
+                
+            } catch (error) {
+                log(`Error starting audio: ${error.message}`, 'error');
+                updateStatus('Error', 'error');
+            }
+        }
+
+        function stopAudio() {
+            if (processor) {
+                processor.disconnect();
+                processor = null;
+            }
+            
+            if (audioContext) {
+                audioContext.close();
+                audioContext = null;
+            }
+            
+            if (mediaStream) {
+                mediaStream.getTracks().forEach(track => track.stop());
+                mediaStream = null;
+            }
+            
+            if (isRecording && ws && ws.readyState === WebSocket.OPEN) {
+                ws.send(JSON.stringify({
+                    type: 'CONTROL_STOP',
+                    timestamp: new Date().toISOString()
+                }));
+                log('Sent CONTROL_STOP', 'info');
+            }
+            
+            isRecording = false;
+            log('Audio recording stopped', 'warning');
+            if (ws && ws.readyState === WebSocket.OPEN) {
+                updateStatus('Connected', 'connected');
+            } else {
+                updateStatus('Disconnected', '');
+            }
+            document.getElementById('startBtn').disabled = false;
+            document.getElementById('stopBtn').disabled = true;
+        }
+
+        function disconnect() {
+            stopAudio();
+            if (heartbeatInterval) {
+                clearInterval(heartbeatInterval);
+                heartbeatInterval = null;
+            }
+            if (ws) {
+                ws.close();
+                ws = null;
+            }
+            updateSTTStatus('Idle');
+            updateStatus('Disconnected - Upload a new resume to start again', '');
+        }
+
+        function testRateLimit() {
+            log('Testing rate limit by sending multiple rapid requests...', 'warning');
+            rateLimitRequests = 0;
+            const testInterval = setInterval(() => {
+                if (ws && ws.readyState === WebSocket.OPEN && rateLimitRequests < 15) {
+                    ws.send(JSON.stringify({
+                        type: 'HEARTBEAT',
+                        timestamp: new Date().toISOString()
+                    }));
+                    rateLimitRequests++;
+                    document.getElementById('rateLimitStatus').textContent = `Sent ${rateLimitRequests} requests`;
+                    log(`Rate limit test: Sent request ${rateLimitRequests}`, 'info');
+                } else {
+                    clearInterval(testInterval);
+                    log('Rate limit test completed', 'info');
+                }
+            }, 100); // Send every 100ms (10 requests/second)
+        }
+
+        function testSessionDurationLimit() {
+            log('Simulating session duration limit...', 'warning');
+            // This would require backend support to simulate
+            // For now, just log a message
+            log('Note: Duration limit is checked on each request. To test, wait 60+ minutes or modify backend limits.', 'warning');
+        }
+
+        function testTurnLimit() {
+            log('Simulating turn limit...', 'warning');
+            // This would require backend support to simulate
+            log('Note: Turn limit is checked before processing each user response.', 'warning');
+        }
+
+        function testCostLimits() {
+            log('Simulating cost limits...', 'warning');
+            log('Note: Cost limits are checked before LLM calls and tracked per session.', 'warning');
+        }
+
+        function simulateStuckSession() {
+            log('Simulating stuck session (5 minutes inactivity)...', 'warning');
+            log('Note: Stuck session detection runs every minute. To test, disconnect and wait 5+ minutes.', 'warning');
+        }
+
+        function testErrorNotifications() {
+            log('Testing error notifications...', 'info');
+            // Simulate by sending invalid message
+            if (ws && ws.readyState === WebSocket.OPEN) {
+                ws.send(JSON.stringify({
+                    type: 'INVALID_MESSAGE_TYPE',
+                    timestamp: new Date().toISOString()
+                }));
+                log('Sent invalid message to test error handling', 'info');
+            }
+        }
+
+        function testGracefulDegradation() {
+            log('Testing graceful degradation...', 'info');
+            log('Note: Graceful degradation is tested when components fail (LLM, STT, TTS errors).', 'info');
+            log('To test: Simulate component failures in backend or wait for natural errors.', 'info');
+        }
+
+        function handleTranscript(message) {
+            if (message.is_final || message.type === 'TRANSCRIPT_FINAL') {
+                handleFinalTranscript(message);
+            } else {
+                handlePartialTranscript(message);
+            }
+        }
+
+        function handlePartialTranscript(message) {
+            partialTranscriptCount++;
+            document.getElementById('partialTranscriptCount').textContent = partialTranscriptCount;
+            
+            const showPartial = document.getElementById('showPartial').checked;
+            if (showPartial) {
+                addTranscriptEntry(message.transcript || message.text || '', false);
+            }
+            
+            updateSTTStatus('Processing');
+            log(`Partial transcript: "${message.transcript || message.text || ''}"`, 'info');
+        }
+
+        function handleFinalTranscript(message) {
+            finalTranscriptCount++;
+            document.getElementById('finalTranscriptCount').textContent = finalTranscriptCount;
+            
+            const transcript = message.transcript || message.text || '';
+            addTranscriptEntry(transcript, true);
+            
+            // Also add to conversation view
+            if (transcript && transcript.trim()) {
+                addConversationEntry('user', transcript);
+            }
+            
+            updateSTTStatus('Complete');
+            log(`Final transcript: "${transcript}"`, 'success');
+            
+            setTimeout(() => {
+                if (sttStatus === 'Complete') {
+                    updateSTTStatus('Idle');
+                }
+            }, 2000);
+        }
+
+        function handleSTTStatus(message) {
+            const status = message.status || 'Idle';
+            updateSTTStatus(status);
+            log(`STT Status: ${status}`, 'info');
+        }
+
+        function handleUserResponseComplete(message) {
+            const transcript = message.transcript || message.text || '';
+            log(`USER_RESPONSE_COMPLETE: "${transcript}"`, 'success');
+            addTranscriptEntry(`[COMPLETE] ${transcript}`, true, 'complete');
+            updateSTTStatus('Complete');
+            updateAIEngineStatus('Processing');
+            totalTurns++;
+            document.getElementById('totalTurns').textContent = totalTurns;
+        }
+        
+        function handleAIResponse(message) {
+            aiResponseCount++;
+            document.getElementById('aiResponseCount').textContent = aiResponseCount;
+            
+            const response = message.response || message;
+            const action = response.action || 'unknown';
+            const text = response.text || '';
+            const type = response.type || 'SPEAK';
+            const phase = response.metadata?.phase || 'unknown';
+            const wasOverridden = response.was_overridden || false;
+            const overrideReason = response.override_reason || null;
+            
+            // Update current phase
+            if (phase !== 'unknown') {
+                document.getElementById('currentPhase').textContent = phase;
+            }
+            
+            // Update tokens if available
+            if (response.metadata?.tokens) {
+                llmTokens += response.metadata.tokens;
+                document.getElementById('llmTokens').textContent = llmTokens;
+            }
+            
+            // Add to AI response log
+            addAIResponseEntry({
+                action: action,
+                text: text,
+                type: type,
+                phase: phase,
+                wasOverridden: wasOverridden,
+                overrideReason: overrideReason,
+                metadata: response.metadata || {}
+            });
+            
+            // Also add to conversation view
+            if (text && text.trim() && type === 'speak') {
+                addConversationEntry('ai', text, { phase: phase });
+            }
+            
+            updateAIEngineStatus('Complete');
+            log(`AI Response: action=${action}, text="${text.substring(0, 50)}${text.length > 50 ? '...' : ''}"`, 'success');
+            
+            setTimeout(() => {
+                if (aiEngineStatus === 'Complete') {
+                    updateAIEngineStatus('Idle');
+                }
+            }, 2000);
+        }
+        
+        function addAIResponseEntry(response) {
+            const aiResponseLog = document.getElementById('aiResponseLog');
+            
+            const noResponsesMsg = aiResponseLog.querySelector('div[style*="color: #666"]');
+            if (noResponsesMsg) {
+                noResponsesMsg.remove();
+            }
+            
+            const entry = document.createElement('div');
+            entry.className = 'log-entry';
+            entry.style.marginBottom = '10px';
+            entry.style.padding = '8px';
+            entry.style.border = '1px solid #ddd';
+            entry.style.borderRadius = '4px';
+            entry.style.backgroundColor = '#f9f9f9';
+            
+            const timestamp = new Date().toLocaleTimeString();
+            const overrideBadge = response.wasOverridden ? 
+                '<span style="background: #ff9900; color: white; padding: 2px 6px; border-radius: 3px; font-size: 10px; margin-left: 5px;">OVERRIDDEN</span>' : '';
+            
+            entry.innerHTML = `
+                <div style="color: #666; font-size: 11px; margin-bottom: 4px;">
+                    [${timestamp}] ${overrideBadge}
+                </div>
+                <div style="margin-bottom: 4px;">
+                    <strong>Action:</strong> <span style="color: #0066cc; font-weight: bold;">${escapeHtml(response.action)}</span>
+                    <span style="margin-left: 10px; color: #666;">Phase: ${escapeHtml(response.phase)}</span>
+                </div>
+                <div style="margin-bottom: 4px;">
+                    <strong>Type:</strong> <span style="color: #009900;">${escapeHtml(response.type)}</span>
+                </div>
+                <div style="margin-bottom: 4px;">
+                    <strong>Text:</strong> <span style="color: #333;">${escapeHtml(response.text || '(no text)')}</span>
+                </div>
+                ${response.overrideReason ? `
+                <div style="margin-top: 4px; padding: 4px; background: #fff3cd; border-radius: 3px; font-size: 11px;">
+                    <strong>Override Reason:</strong> ${escapeHtml(response.overrideReason)}
+                </div>
+                ` : ''}
+                <div style="margin-top: 4px; font-size: 10px; color: #999;">
+                    Follow-ups: ${response.metadata.follow_up_count || 0}
+                </div>
+            `;
+            
+            aiResponseLog.appendChild(entry);
+            aiResponseLog.scrollTop = aiResponseLog.scrollHeight;
+        }
+        
+        function updateAIEngineStatus(status) {
+            aiEngineStatus = status;
+            const statusText = document.getElementById('aiEngineStatusText');
+            statusText.textContent = status;
+            
+            const statusColors = {
+                'Idle': '#666',
+                'Processing': '#ff9900',
+                'Complete': '#009900',
+                'Error': '#cc0000'
+            };
+            statusText.style.color = statusColors[status] || '#666';
+        }
+        
+        function clearAIResponses() {
+            document.getElementById('aiResponseLog').innerHTML = 
+                '<div style="color: #666; font-style: italic;">No AI responses yet...</div>';
+            aiResponseCount = 0;
+            document.getElementById('aiResponseCount').textContent = '0';
+            document.getElementById('currentPhase').textContent = '-';
+            log('AI responses cleared', 'info');
+        }
+
+        function addTranscriptEntry(text, isFinal, type = 'normal') {
+            const transcriptLog = document.getElementById('transcriptLog');
+            
+            const noTranscriptsMsg = transcriptLog.querySelector('div[style*="color: #666"]');
+            if (noTranscriptsMsg) {
+                noTranscriptsMsg.remove();
+            }
+            
+            const entry = document.createElement('div');
+            entry.className = 'log-entry';
+            
+            const timestamp = new Date().toLocaleTimeString();
+            const prefix = isFinal ? '[FINAL]' : '[PARTIAL]';
+            const typePrefix = type === 'complete' ? '[COMPLETE]' : prefix;
+            
+            entry.innerHTML = `<span style="color: #666;">[${timestamp}]</span> ` +
+                             `<span style="font-weight: ${isFinal ? 'bold' : 'normal'}; ` +
+                             `color: ${isFinal ? '#009900' : '#0066cc'};">${typePrefix}</span> ` +
+                             `<span>${escapeHtml(text)}</span>`;
+            
+            transcriptLog.appendChild(entry);
+            transcriptLog.scrollTop = transcriptLog.scrollHeight;
+        }
+
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        function updateSTTStatus(status) {
+            sttStatus = status;
+            const statusText = document.getElementById('sttStatusText');
+            statusText.textContent = status;
+            
+            const statusColors = {
+                'Idle': '#666',
+                'Processing': '#ff9900',
+                'Complete': '#009900',
+                'Error': '#cc0000'
+            };
+            statusText.style.color = statusColors[status] || '#666';
+        }
+
+        function clearTranscripts() {
+            document.getElementById('transcriptLog').innerHTML = 
+                '<div style="color: #666; font-style: italic;">User transcripts will appear here...</div>';
+            finalTranscriptCount = 0;
+            partialTranscriptCount = 0;
+            document.getElementById('finalTranscriptCount').textContent = '0';
+            document.getElementById('partialTranscriptCount').textContent = '0';
+            log('Transcripts cleared', 'info');
+        }
+        
+        function clearConversation() {
+            document.getElementById('conversationLog').innerHTML = 
+                '<div style="color: #666; font-style: italic;">Conversation will appear here as it happens...</div>';
+            log('Conversation cleared', 'info');
+        }
+        
+        function addConversationEntry(speaker, text, metadata = {}) {
+            const conversationLog = document.getElementById('conversationLog');
+            
+            const noConvoMsg = conversationLog.querySelector('div[style*="color: #666"]');
+            if (noConvoMsg) {
+                noConvoMsg.remove();
+            }
+            
+            const entry = document.createElement('div');
+            entry.style.marginBottom = '12px';
+            entry.style.padding = '10px';
+            entry.style.borderRadius = '8px';
+            
+            const timestamp = new Date().toLocaleTimeString();
+            
+            if (speaker === 'user') {
+                entry.style.backgroundColor = '#e3f2fd';
+                entry.style.borderLeft = '4px solid #2196f3';
+                entry.style.marginLeft = '20px';
+                entry.innerHTML = `
+                    <div style="font-size: 11px; color: #1565c0; margin-bottom: 4px;">
+                        <strong>YOU</strong> [${timestamp}]
+                    </div>
+                    <div style="color: #333; font-size: 14px;">${escapeHtml(text)}</div>
+                `;
+            } else if (speaker === 'ai') {
+                entry.style.backgroundColor = '#e8f5e9';
+                entry.style.borderLeft = '4px solid #4caf50';
+                entry.style.marginRight = '20px';
+                const phaseInfo = metadata.phase ? ` (Phase: ${metadata.phase})` : '';
+                entry.innerHTML = `
+                    <div style="font-size: 11px; color: #2e7d32; margin-bottom: 4px;">
+                        <strong>INTERVIEWER</strong> [${timestamp}]${phaseInfo}
+                    </div>
+                    <div style="color: #333; font-size: 14px;">${escapeHtml(text)}</div>
+                `;
+            }
+            
+            conversationLog.appendChild(entry);
+            conversationLog.scrollTop = conversationLog.scrollHeight;
+        }
+        
+        function initPlaybackAudioContext() {
+            try {
+                if (!playbackAudioContext) {
+                    if (window.AudioContext || window.webkitAudioContext) {
+                        playbackAudioContext = new (window.AudioContext || window.webkitAudioContext)({
+                            sampleRate: SAMPLE_RATE
+                        });
+                        log('Playback audio context initialized', 'info');
+                    } else {
+                        log('AudioContext not supported in this browser', 'warning');
+                    }
+                }
+            } catch (error) {
+                log(`Error initializing playback audio context: ${error.message}`, 'error');
+                console.error('AudioContext init error:', error);
+            }
+        }
+        
+        function handleTTSAudio(audioData) {
+            try {
+                // Check if audio data is valid
+                if (!audioData || audioData.byteLength === 0) {
+                    // Skip empty chunks
+                    return;
+                }
+                
+                // Check minimum size (at least 2 bytes for one Int16 sample)
+                if (audioData.byteLength < 2) {
+                    return;
+                }
+                
+                initPlaybackAudioContext();
+                
+                if (!playbackAudioContext) {
+                    log('Playback audio context not available', 'warning');
+                    return;
+                }
+                
+                // Convert binary PCM data (Int16Array) to Float32Array
+                const int16Array = new Int16Array(audioData);
+                
+                // Check if we have valid samples
+                if (int16Array.length === 0) {
+                    return;
+                }
+                
+                const float32Array = new Float32Array(int16Array.length);
+                
+                // Convert Int16 (-32768 to 32767) to Float32 (-1.0 to 1.0)
+                for (let i = 0; i < int16Array.length; i++) {
+                    float32Array[i] = int16Array[i] / 32768.0;
+                }
+                
+                // Create audio buffer and play (only if we have valid data)
+                if (float32Array.length > 0) {
+                    const buffer = playbackAudioContext.createBuffer(1, float32Array.length, SAMPLE_RATE);
+                    buffer.getChannelData(0).set(float32Array);
+                    
+                    // Play the audio buffer
+                    playAudioBuffer(buffer);
+                }
+                
+            } catch (error) {
+                // Only log if it's not an empty buffer error
+                if (!error.message.includes('number of frames provided (0)')) {
+                    log(`Error playing TTS audio: ${error.message}`, 'error');
+                }
+            }
+        }
+        
+        function playAudioBuffer(buffer) {
+            try {
+                if (playbackAudioContext.state === 'suspended') {
+                    playbackAudioContext.resume();
+                }
+                
+                // Queue the buffer for sequential playback
+                audioQueue.push(buffer);
+                
+                // Start playing if not already playing
+                if (!isPlayingAudio) {
+                    playNextAudioChunk();
+                }
+                
+            } catch (error) {
+                log(`Error playing audio buffer: ${error.message}`, 'error');
+            }
+        }
+        
+        function playNextAudioChunk() {
+            if (audioQueue.length === 0) {
+                isPlayingAudio = false;
+                return;
+            }
+            
+            try {
+                isPlayingAudio = true;
+                const buffer = audioQueue.shift();
+                
+                if (!buffer || buffer.length === 0) {
+                    // Skip empty buffer and play next
+                    playNextAudioChunk();
+                    return;
+                }
+                
+                const source = playbackAudioContext.createBufferSource();
+                source.buffer = buffer;
+                source.connect(playbackAudioContext.destination);
+                
+                source.onended = () => {
+                    // Play next chunk in queue
+                    playNextAudioChunk();
+                };
+                
+                // Schedule playback time to avoid gaps
+                const currentTime = playbackAudioContext.currentTime;
+                const startTime = Math.max(currentTime, audioStartTime);
+                source.start(startTime);
+                
+                // Update next start time (buffer duration in seconds)
+                audioStartTime = startTime + buffer.duration;
+                
+            } catch (error) {
+                log(`Error playing audio chunk: ${error.message}`, 'error');
+                // Try next chunk even if this one failed
+                isPlayingAudio = false;
+                playNextAudioChunk();
+            }
+        }
+    </script>
+</body>
+</html>
